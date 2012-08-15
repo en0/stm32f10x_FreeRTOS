@@ -78,6 +78,61 @@ static void parse_command(void)
 		do_command(argc, argv);
 }
 
+static void handle_tab(void)
+{
+	int i, j;
+	unsigned int match = 0;
+	struct shell_command *cmd;
+	unsigned int sl = 0;
+
+	shell.match = 0;
+
+	for (i = 0; i < ARRAY_SIZE(commands); i++) {
+		for (j = strlen(commands[i].name); j > 0; j--) {
+			if (!strncmp(commands[i].name, shell.buf, shell.index)) {
+				match++;
+				shell.match |= (1<<i);
+				break;
+			}
+		}
+	}
+
+	if (match == 1) {
+		for (i = 0; i < ARRAY_SIZE(commands); i++) {
+			if (shell.match & (1<<i)) {
+				cmd = &commands[i];
+				memcpy(shell.buf + shell.index, cmd->name + shell.index,
+						strlen(cmd->name) - shell.index);
+				shell.index += strlen(cmd->name) - shell.index;
+			}
+		}
+	} else if (match > 1) {
+		for (i = 0; i < ARRAY_SIZE(commands); i++) {
+			if (shell.match & (1<<i)) {
+				uart_putchar('\n');
+				uart_puts(commands[i].name);
+
+				if (sl == 0 || strlen(commands[i].name) < sl) {
+					sl = strlen(commands[i].name);
+				}
+			}
+		}
+
+		for (i = 0; i < ARRAY_SIZE(commands); i++) {
+			if (shell.match & (1<<i) && strlen(commands[i].name) == sl) {
+				memcpy(shell.buf + shell.index, commands[i].name + shell.index,
+						sl - shell.index);
+				shell.index += sl - shell.index;
+				break;
+			}
+		}
+	}
+
+	uart_putchar('\n');
+	prompt();
+	uart_puts(shell.buf);
+}
+
 static void handle_input(char c)
 {
 	switch (c) {
@@ -90,6 +145,28 @@ static void handle_input(char c)
 				memset(shell.buf, 0, sizeof(shell.buf));
 			}
 			prompt();
+			break;
+
+		case '\b':
+			if (shell.index) {
+				shell.buf[shell.index-1] = '\0';
+				shell.index--;
+				uart_putchar(c);
+				uart_putchar(' ');
+				uart_putchar(c);
+			}
+			break;
+
+		case '\t':
+			handle_tab();
+			break;
+
+		default:
+			if (shell.index < SHELL_CMD_BUFFER_LEN - 1) {
+				uart_putchar(c);
+				shell.buf[shell.index] = c;
+				shell.index++;
+			}
 	}
 }
 
