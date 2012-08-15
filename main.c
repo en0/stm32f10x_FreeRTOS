@@ -9,13 +9,6 @@
 #include <task.h>
 #include <semphr.h>
 
-unsigned long runtime_stats_clock = 0;
-
-void TIM2_IRQHandler(void)
-{
-	runtime_stats_clock++;
-}
-
 void vApplicationTickHook(void)
 {
 }
