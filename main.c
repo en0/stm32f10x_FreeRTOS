@@ -5,7 +5,6 @@
 
 #include <FreeRTOS.h>
 #include <task.h>
-#include <queue.h>
 #include <semphr.h>
 
 unsigned long runtime_stats_clock = 0;
@@ -33,7 +32,13 @@ int main(void)
 
 	/* We'll only get here if there was insufficient memory to create the
 	 * idle task. */
-	for (;;);
+	for (;;) {
+		int c;
+
+		c = uart_getchar();
+		if (c > 0)
+			uart_putchar(c);
+	}
 
 	return 0;
 }
