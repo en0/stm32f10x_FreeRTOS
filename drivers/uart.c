@@ -78,6 +78,18 @@ static void uart_io_init(void)
 	GPIO_PinRemapConfig(GPIO_Remap_USART2, ENABLE);
 }
 
+static void uart_irq_init(void)
+{
+	NVIC_InitTypeDef NVIC_InitStructure;
+
+	NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+
+	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+}
+
 static void uart_hw_init(uint32_t baud)
 {
 	USART_InitTypeDef conf;
@@ -96,8 +108,6 @@ static void uart_hw_init(uint32_t baud)
 	USART_Init(USART2, &conf);
 
 	USART_Cmd(USART2, ENABLE);
-
-	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
 }
 
 void uart_task_init(void)
@@ -114,4 +124,5 @@ void uart_init(uint32_t baud)
 	uart_task_init();
 	uart_io_init();
 	uart_hw_init(baud);
+	uart_irq_init();
 }
