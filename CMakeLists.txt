@@ -14,6 +14,7 @@ INCLUDE_DIRECTORIES(
     ${CMSIS_INCLUDE_DIR}
     ${StdPeriphLib_INCLUDE_DIR}
     drivers
+    shell
     os/include
     os/portable/GCC/ARM_CM3
 )
@@ -33,8 +34,13 @@ SET(OS_SOURCES
     os/portable/MemMang/heap_1.c
 )
 
+SET(SHELL_SOURCES
+    shell/shell.c
+)
+
 SET(PROJECT_SOURCES
     main.c
+    ${SHELL_SOURCES}
     ${DRIVER_SOURCES}
     ${OS_SOURCES}
 )
