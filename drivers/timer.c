@@ -4,16 +4,17 @@
 
 #include <FreeRTOS.h>
 
-#define timerINTERRUPT_FREQUENCY                ((uint16_t)20000)
+#define TIMER_INTERRUPT_FREQUENCY	((uint16_t)20000)
 
 /* The expected time between each of the timer interrupts - if the jitter was
  * zero. */
-#define timerEXPECTED_DIFFERENCE_VALUE  ( configCPU_CLOCK_HZ / timerINTERRUPT_FREQUENCY )
+#define TIMER_EXPECTED_DIFFERENCE_VALUE	(configCPU_CLOCK_HZ / TIMER_INTERRUPT_FREQUENCY)
 
-#define timerSETTLE_TIME			5
+/* The number of interrupts to pass before we start looking at the jitter. */
+#define TIMER_SETTLE_TIME		5
 
 /* Stores the value of the maximum recorded jitter between interrupts. */
-volatile unsigned short usMaxJitter = 0;
+volatile unsigned short max_jitter_us = 0;
 
 /* Variable that counts at 20KHz to provide the time base for the run time
  * stats. */
@@ -35,7 +36,7 @@ static void timer_hw_init(void)
 
 	/* TIM2 for generating interrupts */
 
-	freq = configCPU_CLOCK_HZ / timerINTERRUPT_FREQUENCY;
+	freq = configCPU_CLOCK_HZ / TIMER_INTERRUPT_FREQUENCY;
 
 	conf.TIM_Period = (uint16_t)(freq & 0xFFFF);
 	conf.TIM_Prescaler = 0;
@@ -86,7 +87,7 @@ void TIM2_IRQHandler( void )
 	/* Capture the free running TIM3 value as we enter the interrupt. */
 	this_count_us = TIM3->CNT;
 
-	if (settle_count_us >= timerSETTLE_TIME) {
+	if (settle_count_us >= TIMER_SETTLE_TIME) {
 		/* What is the difference between the timer value in this
 		 * interrupt and the value from the last interrupt? */
 		difference_us = this_count_us - last_count_us;
@@ -97,7 +98,8 @@ void TIM2_IRQHandler( void )
 		 * 'jitter' in the processing of these interrupts. */
 		if (difference_us > max_difference_us) {
 			max_difference_us = difference_us;
-			usMaxJitter = max_difference_us - timerEXPECTED_DIFFERENCE_VALUE;
+			max_jitter_us = max_difference_us -
+				TIMER_EXPECTED_DIFFERENCE_VALUE;
 		}
 	} else {
 		/* Don't bother storing any values for the first couple of
