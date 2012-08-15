@@ -13,22 +13,29 @@ INCLUDE_DIRECTORIES(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMSIS_INCLUDE_DIR}
     ${StdPeriphLib_INCLUDE_DIR}
+    drivers
     os/include
     os/portable/GCC/ARM_CM3
 )
 
+SET(DRIVER_SOURCES
+    drivers/gpio.c
+    drivers/uart.c
+)
+
 SET(OS_SOURCES
-  os/croutine.c
-  os/list.c
-  os/queue.c
-  os/tasks.c
-  os/timers.c
-  os/portable/GCC/ARM_CM3/port.c
-  os/portable/MemMang/heap_1.c
+    os/croutine.c
+    os/list.c
+    os/queue.c
+    os/tasks.c
+    os/timers.c
+    os/portable/GCC/ARM_CM3/port.c
+    os/portable/MemMang/heap_1.c
 )
 
 SET(PROJECT_SOURCES
     main.c
+    ${DRIVER_SOURCES}
     ${OS_SOURCES}
 )
 

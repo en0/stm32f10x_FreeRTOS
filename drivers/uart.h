@@ -3,9 +3,10 @@
 
 #include <stdint.h>
 
-int uart_putchar(int c);
-
 void uart_init(uint32_t baud);
 
+int uart_putchar(int c);
+
+int uart_getchar(void);
 
 #endif /* __UART_H__ */

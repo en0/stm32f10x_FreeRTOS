@@ -13,6 +13,33 @@ static struct {
 	xQueueHandle rxq;
 } uart;
 
+void USART2_IRQHandler(void)
+{
+	portBASE_TYPE xHigherPriorityTaskWoken = 0;
+
+	/* Receiver has data.  Try to enqueue it (if we're unable to, we simply
+	 * discard the byte and move on). */
+	if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) {
+		int c = USART_ReceiveData(USART2);
+
+		xQueueSendToBackFromISR(uart.rxq, (const void *)c,
+				&xHigherPriorityTaskWoken);
+	}
+}
+
+int uart_getchar(void)
+{
+	int c;
+	portBASE_TYPE res;
+	
+	res = xQueueReceive(uart.rxq, &c, 0);
+
+	if (res == pdPASS)
+		return c;
+	else
+		return -EBUSY;
+}
+
 int uart_putchar(int c)
 {
 	portBASE_TYPE res;
@@ -30,7 +57,7 @@ static void uart_task(void *params)
 	int c;
 
 	for (;;) {
-		if (USART_GetFlagStatus(USART2, USART_FLAG_TXE)) {
+		if (USART_GetFlagStatus(USART2, USART_FLAG_TXE) != RESET) {
 			xQueueReceive(uart.txq, &c, portMAX_DELAY);
 			USART_SendData(USART2, c);
 		} else {
@@ -69,6 +96,8 @@ static void uart_hw_init(uint32_t baud)
 	USART_Init(USART2, &conf);
 
 	USART_Cmd(USART2, ENABLE);
+
+	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
 }
 
 void uart_task_init(void)
