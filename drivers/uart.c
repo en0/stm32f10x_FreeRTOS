@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdio.h>
 
 #include <stm32f10x.h>
 #include <stm32f10x_usart.h>
@@ -37,7 +38,7 @@ int uart_getchar(void)
 	if (res == pdPASS)
 		return c;
 	else
-		return -EBUSY;
+		return EOF;
 }
 
 int uart_putchar(int c)
@@ -49,7 +50,22 @@ int uart_putchar(int c)
 	if (res == pdPASS)
 		return c;
 	else
-		return -EBUSY;
+		return EOF;
+}
+
+int uart_puts(const char *s)
+{
+	int count = 0;
+
+	do {
+		if (uart_putchar(*s) == EOF)
+			return -EOF;
+		else
+			count++;
+		s++;
+	} while (*s);
+
+	return count;
 }
 
 static void uart_task(void *params)
