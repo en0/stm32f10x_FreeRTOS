@@ -34,13 +34,7 @@ int main(void)
 
 	/* We'll only get here if there was insufficient memory to create the
 	 * idle task. */
-	for (;;) {
-		int c;
-
-		c = uart_getchar();
-		if (c > 0)
-			uart_putchar(c);
-	}
+	for (;;);
 
 	return 0;
 }
