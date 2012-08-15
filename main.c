@@ -2,6 +2,7 @@
 #include <stm32f10x.h>
 
 #include <uart.h>
+#include <shell.h>
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -27,6 +28,7 @@ int main(void)
 {
 	timer_init();
 	uart_init(115200);
+	shell_init();
 
 	vTaskStartScheduler();
 
