@@ -22,6 +22,7 @@ INCLUDE_DIRECTORIES(
 SET(DRIVER_SOURCES
     drivers/gpio.c
     drivers/uart.c
+    drivers/timer.c
 )
 
 SET(OS_SOURCES

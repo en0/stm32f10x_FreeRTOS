@@ -3,6 +3,7 @@
 
 #include <uart.h>
 #include <shell.h>
+#include <timer.h>
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -17,11 +18,6 @@ void TIM2_IRQHandler(void)
 
 void vApplicationTickHook(void)
 {
-}
-
-static void timer_init(void)
-{
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 }
 
 int main(void)
