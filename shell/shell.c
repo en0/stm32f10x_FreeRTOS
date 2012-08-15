@@ -6,6 +6,8 @@
 
 static void shell_task(void *params)
 {
+	uart_puts(WELCOME_STRING);
+
 	while (1) {
 	}
 }
