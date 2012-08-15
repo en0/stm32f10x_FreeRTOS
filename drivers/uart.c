@@ -21,8 +21,8 @@ int uart_putchar(int c)
 
 	if (res == pdPASS)
 		return c;
-
-	return -EBUSY;
+	else
+		return -EBUSY;
 }
 
 static void uart_task(void *params)
@@ -82,7 +82,7 @@ void uart_task_init(void)
 
 void uart_init(uint32_t baud)
 {
+	uart_task_init();
 	uart_io_init();
 	uart_hw_init(baud);
-	uart_task_init();
 }
