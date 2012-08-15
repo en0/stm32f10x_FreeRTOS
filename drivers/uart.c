@@ -33,7 +33,7 @@ int uart_getchar(void)
 	int c;
 	portBASE_TYPE res;
 	
-	res = xQueueReceive(uart.rxq, &c, 0);
+	res = xQueueReceive(uart.rxq, &c, 100);
 
 	if (res == pdPASS)
 		return c;
