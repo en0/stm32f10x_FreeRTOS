@@ -138,5 +138,9 @@ extern unsigned long runtime_stats_clock;
 #define portGET_RUN_TIME_COUNTER_VALUE() runtime_stats_clock
 
 
+#define vPortSVCHandler SVC_Handler
+#define xPortPendSVHandler PendSV_Handler
+#define xPortSysTickHandler SysTick_Handler
+
 #endif /* FREERTOS_CONFIG_H */
 
