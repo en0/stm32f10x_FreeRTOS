@@ -23,7 +23,7 @@ void USART2_IRQHandler(void)
 	if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) {
 		int c = USART_ReceiveData(USART2);
 
-		xQueueSendToBackFromISR(uart.rxq, (const void *)c,
+		xQueueSendToBackFromISR(uart.rxq, (const void *)&c,
 				&xHigherPriorityTaskWoken);
 	}
 }
@@ -45,7 +45,7 @@ int uart_putchar(int c)
 {
 	portBASE_TYPE res;
 	
-	res = xQueueSendToBack(uart.txq, (const void *)c, 0);
+	res = xQueueSendToBack(uart.txq, (const void *)&c, 0);
 
 	if (res == pdPASS)
 		return c;
@@ -74,8 +74,9 @@ static void uart_task(void *params)
 
 	for (;;) {
 		if (USART_GetFlagStatus(USART2, USART_FLAG_TXE) != RESET) {
-			xQueueReceive(uart.txq, &c, portMAX_DELAY);
+			if(pdPASS == xQueueReceive(uart.txq, &c, portMAX_DELAY)) {
 			USART_SendData(USART2, c);
+			}
 		} else {
 			vTaskDelay(10);
 		}
