@@ -13,6 +13,10 @@ void vApplicationTickHook(void)
 {
 }
 
+void vApplicationStackOverflowHook(void)
+{
+}
+
 int main(void)
 {
 	timer_init();
