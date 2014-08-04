@@ -85,11 +85,14 @@ static void uart_task(void *params)
 
 static void uart_io_init(void)
 {
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_AFIO, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+    
 	/* USART2 RX */
-	gpio_config(GPIOA, GPIO_Pin_5,
+	gpio_config(GPIOA, GPIO_Pin_3,
 			GPIO_Mode_AF_PP, GPIO_Speed_50MHz);
 	/* USART2 TX */
-	gpio_config(GPIOA, GPIO_Pin_6,
+	gpio_config(GPIOA, GPIO_Pin_2,
 			GPIO_Mode_IN_FLOATING, GPIO_Speed_50MHz);
 	/* remap for dev kit */
 	GPIO_PinRemapConfig(GPIO_Remap_USART2, ENABLE);
