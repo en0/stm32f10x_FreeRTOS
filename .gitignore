@@ -1,4 +1,5 @@
 *.swp
+*.bin
 # Object files
 *.o
 *.ko

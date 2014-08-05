@@ -3,19 +3,19 @@ stm32-freertos
 
 This is a basic FreeRTOS demo for the STM32F10x.
 
-This project is meant to be built with gcc (ex: arm-none-eabi toolchain from
-codesourcery) and [this cmake framework](https://github.com/ObKo/stm32-cmake)
+This project is meant to be built with gcc (ex: arm-none-eabi toolchain) 
+and GNU Make.
 
-For example, to generate the Makefile first run:
+For example, to build the project:
 
-`$ cmake -DSTM32_CHIP_TYPE=CL -DCMAKE_TOOLCHAIN_FILE=../gcc_stm32.cmake -DCMAKE_BUILD_TYPE=Debug`
+`$ make
 
-Then run:
+Both binary and hex output will be generated.
 
-`$ make`
+To flash the chip, assuming you are using the stm32loader python script:
 
-to build the ELF image (app.elf) or:
+`$ make install
 
-`$ make app.bin`
+Review the config.mk file to setup serial ports and baud rates as well
+as build targets.
 
-To build a binary.
