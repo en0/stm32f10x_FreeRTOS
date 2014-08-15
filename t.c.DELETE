@@ -1,0 +1,24 @@
+#include <stdio.h>
+#include "os/include/hashmap.h"
+
+
+
+int main() {
+    xHashMap_t hmap;
+    int i;
+    int v[] =   {  31,    9,         32,    6,         2 };
+    char *c[] = { "Ian", "Charsia", "Des", "Tristan", "Belle" };
+    int *x;
+
+    xHashMapCreate(sizeof(int), 1024, &hmap);
+
+    for(i = 0; i < 5; i++) {
+        printf("Item: %i\n", i);
+        xHashMapSet(&hmap, c[i], &v[i]);
+    }
+
+    const char* key = "Tristan";
+    x = xHashMapGet(&hmap, key);
+
+    printf("%s => %i\n", key, *x);
+}

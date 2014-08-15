@@ -1,11 +1,8 @@
 #include <FreeRTOS.h>
+#include <task.h>
 #include <gpio.h>
 #include <blinky.h>
 #include <task.h>
-
-void _delay(uint32_t delay_count) {
-    for(;delay_count != 0; delay_count--);
-}
 
 void _init_led() {
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
@@ -21,7 +18,7 @@ void _init_led() {
 void blinky(void *params) {
     while(1) {
         GPIOA->ODR ^= GPIO_Pin_0;
-        _delay(500000);
+        vTaskDelay(500);
     }
 }
 

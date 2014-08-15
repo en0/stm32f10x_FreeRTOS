@@ -1,148 +1,255 @@
 #include <errno.h>
-#include <stdio.h>
+#undef errno
+extern int errno;
 
 #include <stm32f10x.h>
 #include <stm32f10x_usart.h>
 #include <gpio.h>
+#include <uart.h>
 
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
 
-static struct {
-	xQueueHandle txq;
-	xQueueHandle rxq;
-} uart;
 
-void USART2_IRQHandler(void)
-{
-	portBASE_TYPE xHigherPriorityTaskWoken = 0;
+/**
+ ** Initialize a specific UART. Init for RX or TX or RX/TX
+ ** Should except arguments for USART Config
+ ** should except argument for interrupt return
+ ** expose send function
+ ** expose recieve function
+ **/
 
-	/* Receiver has data.  Try to enqueue it (if we're unable to, we simply
-	 * discard the byte and move on). */
-	if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) {
-		int c = USART_ReceiveData(USART2);
+typedef struct {
+    /** Identify the USART to use **/
+    USART_TypeDef* USARTx;
 
-		xQueueSendToBackFromISR(uart.rxq, (const void *)&c,
-				&xHigherPriorityTaskWoken);
-	}
-}
+    /** IRQ Handle **/
+    uint32_t GlobalIRQn;
 
-int uart_getchar(void)
-{
-	int c;
-	portBASE_TYPE res;
-	
-	res = xQueueReceive(uart.rxq, &c, 100);
+    /** For GPIO Pin Timer Settings **/
+    uint32_t Periph_GPIO;
+    void(*PeriphClockCmd_GPIO)(uint32_t, FunctionalState);
 
-	if (res == pdPASS)
-		return c;
-	else
-		return EOF;
-}
+    /** For USART Timer Settings **/
+    uint32_t Periph_USART;
+    void(*PeriphClockCmd_USART)(uint32_t, FunctionalState);
 
-int uart_putchar(int c)
-{
-	portBASE_TYPE res;
-	
-	res = xQueueSendToBack(uart.txq, (const void *)&c, 0);
+    /** The GPIO Pin Settings **/
+    GPIO_TypeDef* GPIO_Port;
+    uint16_t RX_Pin;
+    uint16_t TX_Pin;
 
-	if (res == pdPASS)
-		return c;
-	else
-		return EOF;
-}
+    /** Tracking **/
+    uint32_t FLAGS;
+    xQueueHandle* rx;
+} USART_Handle_t;
 
-int uart_puts(const char *s)
-{
-	int count = 0;
 
-	do {
-		if (uart_putchar(*s) == EOF)
-			return -EOF;
-		else
-			count++;
-		s++;
-	} while (*s);
+/** 
+ ** The stm32f103cbt6 has 3 usarts 
+ ** This array holds the definitions to
+ ** initialize them.
+ **/
 
-	return count;
-}
+USART_Handle_t _usarts[] = {
+    {
+        USART1,                      // USARTx
+        USART1_IRQn,                 // GlobalIRQn
+        RCC_APB2Periph_GPIOA,        // Periph_GPIO
+        RCC_APB2PeriphClockCmd,      // PeriphClockCmd_GPIO
+        RCC_APB2Periph_USART1,       // Periph_USART
+        RCC_APB2PeriphClockCmd,      // PeriphClockCmd_USART
+        GPIOA,                       // GPIO_Port
+        GPIO_Pin_10,                 // RX_Pin
+        GPIO_Pin_9,                  // TX_Pin
+        0x00,                        // FLAGS
+        NULL,                        // rx
+    }, {
+        USART2,                      // USARTx
+        USART2_IRQn,                 // GlobalIRQn
+        RCC_APB2Periph_GPIOA,        // Periph_GPIO
+        RCC_APB2PeriphClockCmd,      // PeriphClockCmd_GPIO
+        RCC_APB1Periph_USART2,       // Periph_USART
+        RCC_APB1PeriphClockCmd,      // PeriphClockCmd_USART
+        GPIOA,                       // GPIO_Port
+        GPIO_Pin_3,                  // RX_Pin
+        GPIO_Pin_2,                  // TX_Pin
+        0x00,                        // FLAGS
+        NULL,                        // rx
+    }, {
+        USART3,                      // USARTx
+        USART3_IRQn,                 // GlobalIRQn
+        RCC_APB2Periph_GPIOB,        // Periph_GPIO
+        RCC_APB2PeriphClockCmd,      // PeriphClockCmd_GPIO
+        RCC_APB1Periph_USART3,       // Periph_USART
+        RCC_APB1PeriphClockCmd,      // PeriphClockCmd_USART
+        GPIOB,                       // GPIO_Port
+        GPIO_Pin_11,                 // RX_Pin
+        GPIO_Pin_10,                 // TX_Pin
+        0x00,                        // FLAGS
+        NULL,                        // rx
+    }
+};
 
-static void uart_task(void *params)
-{
-	int c;
-
-	for (;;) {
-		if (USART_GetFlagStatus(USART2, USART_FLAG_TXE) != RESET) {
-			if(pdPASS == xQueueReceive(uart.txq, &c, portMAX_DELAY)) {
-			USART_SendData(USART2, c);
-			}
-		} else {
-			vTaskDelay(10);
-		}
-	}
-}
-
-static void uart_io_init(void)
-{
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_AFIO, ENABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
-    
-	/* USART2 RX */
-	gpio_config(GPIOA, GPIO_Pin_3,
-			GPIO_Mode_AF_PP, GPIO_Speed_50MHz);
-	/* USART2 TX */
-	gpio_config(GPIOA, GPIO_Pin_2,
-			GPIO_Mode_IN_FLOATING, GPIO_Speed_50MHz);
-	/* remap for dev kit */
-	GPIO_PinRemapConfig(GPIO_Remap_USART2, ENABLE);
-}
-
-static void uart_irq_init(void)
-{
+void _install_IT(USART_TypeDef* USARTx, uint32_t GlobalIRQn) {
 	NVIC_InitTypeDef NVIC_InitStructure;
 
-	NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannel = GlobalIRQn;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 
-	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+	USART_ITConfig(USARTx, USART_IT_RXNE, ENABLE);
 }
 
-static void uart_hw_init(uint32_t baud)
-{
-	USART_InitTypeDef conf;
+void _init_hw(uint32_t usartx, USART_InitTypeDef *conf) {
+    USART_Handle_t *ident = &_usarts[usartx];
 
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+    ident->PeriphClockCmd_GPIO(ident->Periph_GPIO | RCC_APB2Periph_AFIO, ENABLE);
+    ident->PeriphClockCmd_USART(ident->Periph_USART, ENABLE);
 
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
+    if((conf->USART_Mode & USART_Mode_Rx) == USART_Mode_Rx) {
+        ident->FLAGS |= USART_RX;
+        gpio_config(ident->GPIO_Port, ident->RX_Pin, GPIO_Mode_IN_FLOATING, 0);
+        _install_IT(ident->USARTx, ident->GlobalIRQn);
+    }
 
-	conf.USART_BaudRate = baud;
-	conf.USART_WordLength = USART_WordLength_8b;
-	conf.USART_StopBits = USART_StopBits_1;
-	conf.USART_Parity = USART_Parity_No;
-	conf.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-	conf.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+    if((conf->USART_Mode & USART_Mode_Tx) == USART_Mode_Tx) {
+        ident->FLAGS |= USART_TX;
+        gpio_config(ident->GPIO_Port, ident->TX_Pin, GPIO_Mode_AF_PP, GPIO_Speed_50MHz);
+    }
 
-	USART_Init(USART2, &conf);
 
-	USART_Cmd(USART2, ENABLE);
+    USART_Init(ident->USARTx, conf);
+    USART_Cmd(ident->USARTx, ENABLE);
+    ident->FLAGS |= USART_ENABLED;
 }
 
-void uart_task_init(void)
-{
-	uart.txq = xQueueCreate(16, sizeof(int));
-	uart.rxq = xQueueCreate(16, sizeof(int));
 
-	xTaskCreate(uart_task, (signed char *)"UART", configMINIMAL_STACK_SIZE,
-			(void *)NULL, tskIDLE_PRIORITY + 3, NULL);
+/**
+ ** Interrupt handers for RX data on UARTx
+ **/
+
+void _irqhander(uint32_t usart_no, uint16_t c) {
+    USART_Handle_t *ident = &_usarts[usart_no];
+
+    if((ident->FLAGS & USART_ISOPEN) != USART_ISOPEN) return;
+    portBASE_TYPE xHigherPriorityTaskWoken = 0;
+    xQueueSendToBackFromISR(ident->rx, &c, &xHigherPriorityTaskWoken);
 }
 
-void uart_init(uint32_t baud)
-{
-	uart_task_init();
-	uart_io_init();
-	uart_hw_init(baud);
-	uart_irq_init();
+void USART1_IRQHandler(void) {
+	if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) {
+		uint16_t v = USART_ReceiveData(USART1);
+        _irqhander(USARTa, v);
+	}
+}
+
+void USART2_IRQHandler(void) {
+	if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) {
+		uint16_t v = USART_ReceiveData(USART2);
+        _irqhander(USARTb, v);
+	}
+}
+
+void USART3_IRQHandler(void) {
+	if (USART_GetITStatus(USART3, USART_IT_RXNE) != RESET) {
+		uint16_t v = USART_ReceiveData(USART3);
+        _irqhander(USARTc, v);
+	}
+}
+
+int usart_Open(uint32_t usart_no) {
+
+    if(usart_no >= USARTx_COUNT) { errno = ENXIO; return -1; }
+    USART_Handle_t *ident = &_usarts[usart_no];
+
+    if((ident->FLAGS & USART_ISOPEN) == USART_ISOPEN) {
+        errno = EBUSY; 
+        return -1;
+    }
+
+    if((ident->FLAGS & USART_ENABLED) != USART_ENABLED) {
+        errno = ENXIO; 
+        return -1;
+    }
+
+    ident->FLAGS |= USART_ISOPEN;
+
+    xQueueReset(ident->rx);
+
+    return usart_no;
+}
+
+int usart_Close(uint32_t usart_no) {
+    if(usart_no >= USARTx_COUNT) { errno = ENXIO; return -1; }
+    USART_Handle_t *ident = &_usarts[usart_no];
+
+    if((ident->FLAGS & USART_ISOPEN) != USART_ISOPEN) {
+        errno = EPERM; return -1;
+    }
+    
+    ident->FLAGS &= ~(USART_ISOPEN);
+    xQueueReset(ident->rx);
+    return 0;
+}
+
+int usart_WriteByte(uint32_t usart_no, uint16_t v) {
+    if(usart_no >= USARTx_COUNT) { errno = ENXIO; return -1; }
+    USART_Handle_t *ident = &_usarts[usart_no];
+
+    if((ident->FLAGS & USART_ISOPEN) != USART_ISOPEN) {
+        errno = EPERM; return -1;
+    }
+
+    if((ident->FLAGS & USART_TX) != USART_TX) {
+        errno = EPERM; return -1;
+    }
+
+    USART_SendData(ident->USARTx, v);
+    while(USART_GetFlagStatus(ident->USARTx, USART_FLAG_TXE) == RESET);
+    return 1;
+}
+
+int usart_ReadByte(uint32_t usart_no, uint16_t *v) {
+
+    if(usart_no >= USARTx_COUNT) { errno = ENXIO; return -1; }
+    USART_Handle_t *ident = &_usarts[usart_no];
+
+    if((ident->FLAGS & USART_ISOPEN) != USART_ISOPEN) {
+        errno = EPERM;
+        return -1;
+    }
+
+    if((ident->FLAGS & USART_RX) != USART_RX) {
+        errno = EPERM;
+        return -1;
+    }
+
+    if(xQueueReceive( ident->rx, v, (portTickType)10 ))
+        return 1;
+
+    return 0;
+}
+
+int install_USART(uint32_t usart_no, USART_InitTypeDef *conf, uint32_t queueSize) {
+
+    if(usart_no >= USARTx_COUNT) { errno = ENXIO; return -1; }
+
+    USART_Handle_t *ident = &_usarts[usart_no];
+
+    if((ident->FLAGS & USART_ENABLED) == USART_ENABLED) {
+        errno = EBUSY; return -1;
+    }
+
+    // Initialize hardware
+    _init_hw(usart_no, conf);
+
+    // Setup queue
+    if((ident->FLAGS & USART_RX) == USART_RX) {
+        ident->rx = xQueueCreate(queueSize, sizeof(uint16_t));
+    }
+
+    return usart_no;
 }

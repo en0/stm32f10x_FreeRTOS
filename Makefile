@@ -23,9 +23,11 @@ APP_C = $(wildcard app/*.c)
 
 OS_C = $(wildcard os/*.c) \
        $(wildcard os/portable/GCC/$(PORTABLE)/*.c) \
-       os/portable/MemMang/heap_1.c
+       os/portable/MemMang/heap_3.c
 
-OBJS=$(patsubst %.c, %.c.o, $(wildcard *.c) $(wildcard drivers/*.c) $(APP_C) $(OS_C) $(LIBS_C)) \
+SRV_C = $(wildcard services/*.c)
+
+OBJS=$(patsubst %.c, %.c.o, $(wildcard *.c) $(wildcard drivers/*.c) $(APP_C) $(OS_C) $(LIBS_C) $(SRV_C)) \
      $(patsubst %.s, %.s.o, $(wildcard *.s) $(LIBS_S)) \
 
 CONFIG_H=$(patsubst inc/%.h.in, inc/%.h, $(wildcard inc/*.h.in))
@@ -42,7 +44,7 @@ ASFLAGS += -ggdb
 endif
 
 ## Includes
-CFLAGS += -Iinc/device -Iinc/sys -Iinc -Ios/include -Ios/portable/GCC/$(PORTABLE) -Iapp/inc
+CFLAGS += -Iinc/device -Iinc/sys -Iinc -Ios/include -Ios/portable/GCC/$(PORTABLE) -Iapp/inc -I services/inc
 
 ## END REGION: FLAGS
 
