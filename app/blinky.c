@@ -28,6 +28,4 @@ xTaskHandle* blinky_app() {
     xTaskCreate(blinky, (const signed char*)"Blinky", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, &xHandle);
     configASSERT(xHandle);
     return xHandle;
-    //if(xHandle != NULL) {
-    //}
 }

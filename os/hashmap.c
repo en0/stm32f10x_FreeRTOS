@@ -70,6 +70,7 @@ int xHashMapSet(xHashMap_t* hmap, const char* key, void* value) {
         if(index++ >= hmap->max_count) index = 0;
     }
 
+    hmap->current_count++;
     return index;
 }
 
@@ -95,5 +96,15 @@ void* xHashMapGet(xHashMap_t* hmap, const char* key) {
     } while(_i != index);
 
     return NULL;
+}
+
+int xHashMapKeys(xHashMap_t* hmap, char** buffer) {
+    int i, r = 0;
+    for(i = 0; i < hmap->max_count; i++) {
+        if(hmap->map[i].key[0] == '\0') continue;
+        *buffer++ = hmap->map[i].key;
+        r++;
+    }
+    return r;
 }
 

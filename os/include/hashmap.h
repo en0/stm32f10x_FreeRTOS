@@ -22,6 +22,7 @@ typedef struct {
 void xHashMapCreate(size_t member_size, int count, xHashMap_t* hmap);
 int xHashMapSet(xHashMap_t* hmap, const char* key, void* value);
 void* xHashMapGet(xHashMap_t* hmap, const char* key);
+int xHashMapKeys(xHashMap_t* hmap, char* buffer[KEY_LIMIT]);
 
 #endif /** __HASHMAP_H **/
 

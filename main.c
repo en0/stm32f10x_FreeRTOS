@@ -49,26 +49,10 @@ void vApplicationStackOverflowHook(void) {
 
 int main(void)
 {
-    //extern char _end;
-    //static char *heap_end;
-
     init_wireup();  // Configure wireup
 	timer_init();   // Start timers
     blinky_app();   // Status Application
     echo_app();     // Main Program
-
-
-    /*
-    FILE *f = fopen("/dev/ttyUART2", "w");
-    if(f == NULL) for(;;);
-    fputs("Testing printf functions\r\n\r\n", f);
-
-    printf("Pointer to this UART: %p\r\n", &f);
-    printf("Pointer to bottom of heap: %p\r\n", &heap_end);
-    printf("Pointer to bottom of image: %p\r\n", &_end);
-
-    fputs("\r\nTest Complete\r\n", f);
-    */
 
 	vTaskStartScheduler();
 
