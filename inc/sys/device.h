@@ -28,7 +28,7 @@ struct _device_t {
     device_type major;
     uint32_t minor;
     device_mode_t mode;
-    int(*open)(struct _device_t*);
+    int(*open)(struct _device_t*, int flags);
     int(*close)(struct _device_t*);
     int(*read)(struct _device_t*, uint16_t *v);
     int(*write)(struct _device_t*, uint16_t v);
@@ -59,14 +59,15 @@ int init_devicemap(size_t count);
 int dev_mknode(const char* path, device_type dtype, uint32_t cid, void* conf);
 
 
-/** Open a device for IO                            **
- ** Arguments:                                      **
- **  - path : The inode key to the device           **
- **                                                 **
- ** Returns:                                        **
- **  - On success, returns the FID;                 **
- **  - On error, -1 and errno is set.               **/
-int dev_open(const char* path);
+/** Open a device for IO                                **
+ ** Arguments:                                          **
+ **  - path  : The inode key to the device              **
+ **  - flags : File Access Flags (RDONLY,WRONLY,RDRW)   **
+ **                                                     **
+ ** Returns:                                            **
+ **  - On success, returns the FID;                     **
+ **  - On error, -1 and errno is set.                   **/
+int dev_open(const char* path, int flags);
 
 
 /** Write a byte to an open device                  **

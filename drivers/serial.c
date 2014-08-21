@@ -5,8 +5,8 @@ extern int errno;
 #include <uart.h>
 #include <device.h>
 
-int serial_uart_open(device_t *dev) {
-    if(usart_Open(dev->minor) == dev->minor) return 1;
+int serial_uart_open(device_t *dev, int flags) {
+    if(usart_Open(dev->minor, flags) == dev->minor) return 1;
     return -1;
 }
 

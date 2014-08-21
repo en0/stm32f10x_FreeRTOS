@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #define SCMD_NAME_MAX 16
 #define SCMD_SYNX_MAX 32
 #define SCMD_DESC_MAX 128
@@ -173,6 +176,37 @@ int __mem_dump(int argc, char** argv) {
     return 0;
 }
 
+#include <stm32f10x.h>
+#include <stm32f10x_i2c.h>
+extern void i2c_BufferedRead(I2C_TypeDef* I2Cn, uint8_t slave, uint8_t *buffer, uint8_t addr, int count);
+extern void i2c_WriteByte(I2C_TypeDef* I2Cn, uint8_t slave, uint8_t buffer, uint8_t addr);
+
+//0110 1100
+//0x6c
+
+int __test(int argc, char** argv) {
+    uint8_t p1, p2, x;
+    uint16_t b;
+
+    uint16_t volts;
+    float perc;
+
+    i2c_BufferedRead(I2C1, 0x6c, (uint8_t*)&b, 0x02, 2);
+    i2c_BufferedRead(I2C1, 0x6c, &p1, 0x04, 1);
+    i2c_BufferedRead(I2C1, 0x6c, &p2, 0x05, 1);
+
+    i2c_BufferedRead(I2C1, 0x6c, &x, 0x0D, 1);
+
+    volts = ((b>>8|b<<8)>>4);
+    perc = p1 + (p2/256.0);
+    x = (~x & 0x1F)+1;
+
+    fprintf(_shell_cmd, "Bat0: %0.2f %% @ %0.2f mV\r\n", perc, volts*1.25);
+    fprintf(_shell_cmd, "ALRT @ %u%%\r\n", x);
+
+    return 0;
+}
+
 void shell_init(FILE* fid) {
     _shell_cmd = fid;
     xHashMapCreate(sizeof(shell_cmd_t), 20, &shell_hmap);
@@ -217,5 +251,13 @@ void shell_init(FILE* fid) {
         " FILE  - The path to the file.\r\n"
         " COUNT - The number of bytes to read.\r\n",
         &__read);
+
+    shell_addcmd(
+        "test",
+        "Test",
+        "Run a test subrutine",
+        "test",
+        "\r\n",
+        &__test);
 }
 

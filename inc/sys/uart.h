@@ -18,7 +18,7 @@ enum USART_Status_Flags {
     USART_ENABLED = 1,
     USART_RX = 2,
     USART_TX = 4,
-    USART_ISOPEN = 8
+    USART_ISOPEN = 8,
 };
 
 
@@ -56,13 +56,14 @@ int usart_WriteByte(uint32_t usart_no, uint16_t v);
  ** The queue is flushed when opening.
  ** Arguments:
  **  usart_no - The Universal Sync/Async TX/RX identifyer. enum USARTx.
+ **  flags    - The flags to open the file with (O_RDONLY,O_WRONLY,O_RDWR)
  **
  ** Returns: 
  **  If successfull, the usart_no will be returned.
  **  Else, -1 will be returned and errno will be set.
  **/
 
-int usart_Open(uint32_t usart_no);
+int usart_Open(uint32_t usart_no, int flags);
 
 
 /** 

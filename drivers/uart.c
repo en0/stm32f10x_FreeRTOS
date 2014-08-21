@@ -160,7 +160,7 @@ void USART3_IRQHandler(void) {
 	}
 }
 
-int usart_Open(uint32_t usart_no) {
+int usart_Open(uint32_t usart_no, int flags) {
 
     if(usart_no >= USARTx_COUNT) { errno = ENXIO; return -1; }
     USART_Handle_t *ident = &_usarts[usart_no];

@@ -15,16 +15,16 @@ void send_byte(uint8_t b) {
     switch(b) {
         case '\n':
             send_byte('\r');
-            USART_SendData(USART2, '\n');
-            while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET);
+            USART_SendData(USART3, '\n');
+            while(USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
             break;
 
         default:
-            USART_SendData(USART2, b);
+            USART_SendData(USART3, b);
             break;
 
     }
-    while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET);
+    while(USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
 }
 
 void send_string(const char* str) {

@@ -80,12 +80,14 @@ int dev_mknode(const char* path, device_type dtype, uint32_t cid, void* conf) {
 
 /** Open a device for IO                            **
  ** Arguments:                                      **
- **  - path : The inode key to the device           **
+ **  - path  : The inode key to the device          **
+ **  - flags : File Access Flags                    **
+ **  - mode  : The open mode, R/W/RW                **
  **                                                 **
  ** Returns:                                        **
  **  - On success, returns the FID;                 **
  **  - On error, -1 and errno is set.               **/
-int dev_open(const char* path) {
+int dev_open(const char* path, int flags, int mode) {
     device_t *node = xHashMapGet(&hmap, path);
     if(node == NULL) return -1;
 
@@ -93,7 +95,7 @@ int dev_open(const char* path) {
     for(i = 1; i < MAX_FIDS; i++) {
         if(fids[i] == 0) {
             fids[i] = node;
-            node->open(node);
+            node->open(node, flags, mode);
             return i;
         }
     }

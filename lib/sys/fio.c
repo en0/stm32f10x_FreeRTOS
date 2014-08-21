@@ -7,7 +7,11 @@ extern int errno;
 #include <device.h>
 #include <sys/stat.h>
 
-extern void send_string(const char* str);
+#include <stdio.h>
+#include <fcntl.h>
+
+
+extern void send_string(const char*);
 
 /** Get stats of a open file.                                           **
  ** Arguments:                                                          **
@@ -26,8 +30,8 @@ int _fstat(int file, struct stat *st) {
  **  - flags - The flags, O_APPEND or O_CREATE.                         **
  **  - mode  - the umask used for creating a file. DOES NOT APPLY YET   **/
 int _open(const char *name, int flags, int mode) {
-    // Currently, no support for FLAGS or MODE operations
-    return dev_open(name);
+    // Currently, no support for MODE operations
+    return dev_open(name, flags);
 }
 
 
