@@ -1,15 +1,17 @@
 #include <FreeRTOS.h>
 #include <timer.h>
 #include <task.h>
-#include <device.h>
+
+// Wireup Proto
+extern void init_wireup();
 
 // Application Includes
 #include <blinky.h>
-#include <echo.h>
 
 /** Some debugging Stuff **/
 #include <stdio.h>
-#include <uart.h>
+#include <string.h>
+#include <usart.h>
 void send_byte(uint8_t b) {
 
     switch(b) {
@@ -33,6 +35,27 @@ void send_string(const char* str) {
         send_byte(*str);
 }
 
+void send_memory(void* ptr, size_t len) {
+    char* x = (char*)ptr;
+    char buffer[100];
+    char buffer2[50];
+    int i;
+
+    sprintf(buffer, "Dumping Memory at [0x%x]\n[ %08X ] ", (int)x, (int)x);
+        send_string(buffer);
+
+    for(i = 1; len > 0; len--, x++, i++) {
+        sprintf(buffer, "%02X ", *x);
+        if((i%16) == 0) {
+            sprintf(buffer2, "\n[ %08X ] ", (int)x);
+            strcat(buffer, buffer2);
+        }
+        else if((i%8) == 0) strcat(buffer, "- ");
+        send_string(buffer);
+    }
+    send_byte('\n');
+}
+
 void vApplicationTickHook(void) {
     /**
      ** Fires on timer tick
@@ -47,12 +70,23 @@ void vApplicationStackOverflowHook(void) {
     send_byte('!');
 }
 
+
 int main(void)
 {
-    init_wireup();  // Configure wireup
+
 	timer_init();   // Start timers
-    blinky_app();   // Status Application
-    echo_app();     // Main Program
+    init_wireup();  // Configure wireup
+
+    // Start Services
+    blinky_app();
+    //echo_app();
+
+    send_string("** NOTICE: [ Test drivers ]\n");
+
+
+    printf("Hello, World!\r\n");
+
+    send_string("** NOTICE: [ Starting Task Scheduler ]\n");
 
 	vTaskStartScheduler();
 

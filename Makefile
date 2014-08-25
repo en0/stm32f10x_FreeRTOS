@@ -30,7 +30,7 @@ SRV_C = $(wildcard services/*.c)
 OBJS=$(patsubst %.c, %.c.o, $(wildcard *.c) $(wildcard drivers/*.c) $(APP_C) $(OS_C) $(LIBS_C) $(SRV_C)) \
      $(patsubst %.s, %.s.o, $(wildcard *.s) $(LIBS_S)) \
 
-CONFIG_H=$(patsubst inc/%.h.in, inc/%.h, $(wildcard inc/*.h.in))
+#CONFIG_H=$(patsubst inc/%.h.in, inc/%.h, $(wildcard inc/*.h.in))
 
 ## END REGION: SOURCE
 
@@ -44,7 +44,7 @@ ASFLAGS += -ggdb
 endif
 
 ## Includes
-CFLAGS += -Iinc/device -Iinc/sys -Iinc -Ios/include -Ios/portable/GCC/$(PORTABLE) -Iapp/inc -I services/inc
+CFLAGS += -Ilib/device/inc -Ilib/sys/inc -Iinc -Ios/include -Idrivers/inc -Ios/portable/GCC/$(PORTABLE) -Iapp/inc
 
 ## END REGION: FLAGS
 
@@ -56,7 +56,7 @@ CFLAGS += -Iinc/device -Iinc/sys -Iinc -Ios/include -Ios/portable/GCC/$(PORTABLE
 all : $(OUT).elf $(OUT).hex $(OUT).bin
 
 $(OUT).elf : $(OBJS)
-	@echo \ - LD $@
+	@echo \ - LD $@ 
 	@$(CC) $(LDFLAGS) -o $@ $^
 
 %.bin : %.elf
@@ -75,7 +75,7 @@ $(OUT).elf : $(OBJS)
 	@echo \ - AS $@
 	@$(CC) $(CFLAGS) -o $@ -c $^
 
-%.h : %.h.in $(MAKE_CONFIG)
+%.h : %.h.in
 	@echo \ - GENCONFIG $@
 	@$(GENCONFIG) $(MAKE_CONFIG) $< $@
 

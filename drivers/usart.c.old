@@ -5,7 +5,7 @@ extern int errno;
 #include <stm32f10x.h>
 #include <stm32f10x_usart.h>
 #include <gpio.h>
-#include <uart.h>
+#include <usart.h>
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -52,7 +52,7 @@ typedef struct {
  ** initialize them.
  **/
 
-USART_Handle_t _usarts[] = {
+USART_Handle_t __UsartList[] = {
     {
         USART1,                      // USARTx
         USART1_IRQn,                 // GlobalIRQn
@@ -92,7 +92,7 @@ USART_Handle_t _usarts[] = {
     }
 };
 
-void _install_IT(USART_TypeDef* USARTx, uint32_t GlobalIRQn) {
+void _usart_Install_IT(USART_TypeDef* USARTx, uint32_t GlobalIRQn) {
 	NVIC_InitTypeDef NVIC_InitStructure;
 
 	NVIC_InitStructure.NVIC_IRQChannel = GlobalIRQn;
@@ -103,8 +103,8 @@ void _install_IT(USART_TypeDef* USARTx, uint32_t GlobalIRQn) {
 	USART_ITConfig(USARTx, USART_IT_RXNE, ENABLE);
 }
 
-void _init_hw(uint32_t usartx, USART_InitTypeDef *conf) {
-    USART_Handle_t *ident = &_usarts[usartx];
+void _usart_InitHw(uint32_t usartx, USART_InitTypeDef *conf) {
+    USART_Handle_t *ident = &__UsartList[usartx];
 
     ident->PeriphClockCmd_GPIO(ident->Periph_GPIO | RCC_APB2Periph_AFIO, ENABLE);
     ident->PeriphClockCmd_USART(ident->Periph_USART, ENABLE);
@@ -112,7 +112,7 @@ void _init_hw(uint32_t usartx, USART_InitTypeDef *conf) {
     if((conf->USART_Mode & USART_Mode_Rx) == USART_Mode_Rx) {
         ident->FLAGS |= USART_RX;
         gpio_config(ident->GPIO_Port, ident->RX_Pin, GPIO_Mode_IN_FLOATING, 0);
-        _install_IT(ident->USARTx, ident->GlobalIRQn);
+        _usart_Install_IT(ident->USARTx, ident->GlobalIRQn);
     }
 
     if((conf->USART_Mode & USART_Mode_Tx) == USART_Mode_Tx) {
@@ -131,8 +131,8 @@ void _init_hw(uint32_t usartx, USART_InitTypeDef *conf) {
  ** Interrupt handers for RX data on UARTx
  **/
 
-void _irqhander(uint32_t usart_no, uint16_t c) {
-    USART_Handle_t *ident = &_usarts[usart_no];
+void _usart_irqhander(uint32_t usart_no, uint16_t c) {
+    USART_Handle_t *ident = &__UsartList[usart_no];
 
     if((ident->FLAGS & USART_ISOPEN) != USART_ISOPEN) return;
     portBASE_TYPE xHigherPriorityTaskWoken = 0;
@@ -142,28 +142,28 @@ void _irqhander(uint32_t usart_no, uint16_t c) {
 void USART1_IRQHandler(void) {
 	if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) {
 		uint16_t v = USART_ReceiveData(USART1);
-        _irqhander(USARTa, v);
+        _usart_irqhander(USARTa, v);
 	}
 }
 
 void USART2_IRQHandler(void) {
 	if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) {
 		uint16_t v = USART_ReceiveData(USART2);
-        _irqhander(USARTb, v);
+        _usart_irqhander(USARTb, v);
 	}
 }
 
 void USART3_IRQHandler(void) {
 	if (USART_GetITStatus(USART3, USART_IT_RXNE) != RESET) {
 		uint16_t v = USART_ReceiveData(USART3);
-        _irqhander(USARTc, v);
+        _usart_irqhander(USARTc, v);
 	}
 }
 
 int usart_Open(uint32_t usart_no, int flags) {
 
     if(usart_no >= USARTx_COUNT) { errno = ENXIO; return -1; }
-    USART_Handle_t *ident = &_usarts[usart_no];
+    USART_Handle_t *ident = &__UsartList[usart_no];
 
     if((ident->FLAGS & USART_ISOPEN) == USART_ISOPEN) {
         errno = EBUSY; 
@@ -184,7 +184,7 @@ int usart_Open(uint32_t usart_no, int flags) {
 
 int usart_Close(uint32_t usart_no) {
     if(usart_no >= USARTx_COUNT) { errno = ENXIO; return -1; }
-    USART_Handle_t *ident = &_usarts[usart_no];
+    USART_Handle_t *ident = &__UsartList[usart_no];
 
     if((ident->FLAGS & USART_ISOPEN) != USART_ISOPEN) {
         errno = EPERM; return -1;
@@ -197,7 +197,7 @@ int usart_Close(uint32_t usart_no) {
 
 int usart_WriteByte(uint32_t usart_no, uint16_t v) {
     if(usart_no >= USARTx_COUNT) { errno = ENXIO; return -1; }
-    USART_Handle_t *ident = &_usarts[usart_no];
+    USART_Handle_t *ident = &__UsartList[usart_no];
 
     if((ident->FLAGS & USART_ISOPEN) != USART_ISOPEN) {
         errno = EPERM; return -1;
@@ -215,7 +215,7 @@ int usart_WriteByte(uint32_t usart_no, uint16_t v) {
 int usart_ReadByte(uint32_t usart_no, uint16_t *v) {
 
     if(usart_no >= USARTx_COUNT) { errno = ENXIO; return -1; }
-    USART_Handle_t *ident = &_usarts[usart_no];
+    USART_Handle_t *ident = &__UsartList[usart_no];
 
     if((ident->FLAGS & USART_ISOPEN) != USART_ISOPEN) {
         errno = EPERM;
@@ -233,18 +233,18 @@ int usart_ReadByte(uint32_t usart_no, uint16_t *v) {
     return 0;
 }
 
-int install_USART(uint32_t usart_no, USART_InitTypeDef *conf, uint32_t queueSize) {
+int usart_Install(uint32_t usart_no, USART_InitTypeDef *conf, uint32_t queueSize) {
 
     if(usart_no >= USARTx_COUNT) { errno = ENXIO; return -1; }
 
-    USART_Handle_t *ident = &_usarts[usart_no];
+    USART_Handle_t *ident = &__UsartList[usart_no];
 
     if((ident->FLAGS & USART_ENABLED) == USART_ENABLED) {
         errno = EBUSY; return -1;
     }
 
     // Initialize hardware
-    _init_hw(usart_no, conf);
+    _usart_InitHw(usart_no, conf);
 
     // Setup queue
     if((ident->FLAGS & USART_RX) == USART_RX) {

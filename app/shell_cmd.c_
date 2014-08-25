@@ -176,34 +176,37 @@ int __mem_dump(int argc, char** argv) {
     return 0;
 }
 
-#include <stm32f10x.h>
-#include <stm32f10x_i2c.h>
-extern void i2c_BufferedRead(I2C_TypeDef* I2Cn, uint8_t slave, uint8_t *buffer, uint8_t addr, int count);
-extern void i2c_WriteByte(I2C_TypeDef* I2Cn, uint8_t slave, uint8_t buffer, uint8_t addr);
+int __bat(int argc, char** argv) {
+    char buffer[16], v, *bptr = buffer;
+    FILE* fid = fopen("/bat/mv", "r");
 
-//0110 1100
-//0x6c
+    v = fgetc(fid);
+    while ((v & 0xFF) != (EOF & 0xFF)) {
+        *bptr++ = v;
+        v = fgetc(fid);
+    }
+
+    *bptr = '\0';
+    fclose(fid);
+
+    fprintf(_shell_cmd, "%s\r\n", buffer);
+    return 0;
+}
 
 int __test(int argc, char** argv) {
-    uint8_t p1, p2, x;
-    uint16_t b;
+    char buffer[16], v, *bptr = buffer;
+    FILE* fid = fopen("/bat/mv", "r");
 
-    uint16_t volts;
-    float perc;
+    v = fgetc(fid);
+    while ((v & 0xFF) != (EOF & 0xFF)) {
+        *bptr++ = v;
+        v = fgetc(fid);
+    }
 
-    i2c_BufferedRead(I2C1, 0x6c, (uint8_t*)&b, 0x02, 2);
-    i2c_BufferedRead(I2C1, 0x6c, &p1, 0x04, 1);
-    i2c_BufferedRead(I2C1, 0x6c, &p2, 0x05, 1);
+    *bptr = '\0';
+    fclose(fid);
 
-    i2c_BufferedRead(I2C1, 0x6c, &x, 0x0D, 1);
-
-    volts = ((b>>8|b<<8)>>4);
-    perc = p1 + (p2/256.0);
-    x = (~x & 0x1F)+1;
-
-    fprintf(_shell_cmd, "Bat0: %0.2f %% @ %0.2f mV\r\n", perc, volts*1.25);
-    fprintf(_shell_cmd, "ALRT @ %u%%\r\n", x);
-
+    fprintf(_shell_cmd, "%s\r\n", buffer);
     return 0;
 }
 
@@ -251,6 +254,14 @@ void shell_init(FILE* fid) {
         " FILE  - The path to the file.\r\n"
         " COUNT - The number of bytes to read.\r\n",
         &__read);
+
+    shell_addcmd(
+        "bat",
+        "Battery",
+        "Report Battery Status.",
+        "bat",
+        "\r\n",
+        &__bat);
 
     shell_addcmd(
         "test",

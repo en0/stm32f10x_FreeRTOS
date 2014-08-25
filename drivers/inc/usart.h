@@ -93,6 +93,6 @@ int usart_Close(uint32_t usart_no);
  **  Else, -1 will be returned and errno will be set.
  **/
 
-int install_USART(uint32_t usart_no, USART_InitTypeDef *conf, uint32_t queueSize);
+int usart_Install(uint32_t usart_no, USART_InitTypeDef *conf, uint32_t queueSize);
 
 #endif /* __UART_H__ */

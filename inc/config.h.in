@@ -1,8 +1,0 @@
-#ifndef __CONFIG_H
-#define __CONFIG_H 1
-
-#define PROJNAME "@PROJNAME"
-#define CHIP "@CHIP"
-
-#endif /* __CONFIG_H */
-
