@@ -15,20 +15,36 @@
     Device drivers will handle there own buffers for multi read stuff
 */
 
+#include <errno.h>
+#undef errno
+extern int errno;
+
 #include <periphTerm.h>
 #include <devlist.h>
 
 #ifdef conf_ENABLE_PERIPH_TERM_USART
 
+#include <FreeRTOS.h>
+#include <task.h>
+#include <queue.h>
 #include <gpio.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <stdbool.h>
+#include <stdlib.h>
 
+typedef struct {
+    xQueueHandle* rx;
+    bool wloc;
+} _term_fildes_t;
+
+_term_fildes_t *_term_fildes[conf_MAX_OPEN_FILE_IDS] = {0};
 
 // Remove these
 #include <stdio.h>
 extern void send_string(const char*);
 extern void send_memory(void* ptr, size_t len);
+extern void send_integer(const char* fmt, uint32_t i);
 
 /******
     This is a temp implementation. We need to setup locking but first
@@ -70,38 +86,119 @@ void _term_init_hw() {
     USART_Cmd(conf_TERM_USART, ENABLE);
 }
 
+static bool HAS_WLOC = false;
 
 /** REGION: Driver Interface **/
 
 int _term_open(int fid, int flags, int mode) { 
-    //send_string("/** [ _term_open: HIT, yeah! ] **/\r\n"); 
+
+    #define CK_FLG(f) ((flags & f) == f)
+
+    // Do we want wloc on this request?
+    bool wants_wloc = (CK_FLG(O_WRONLY) || CK_FLG(O_RDWR) ? true : false);
+
+    if(wants_wloc) {
+
+        taskENTER_CRITICAL();
+
+        // Do we already have a wlock?
+        if(HAS_WLOC) {
+
+            taskEXIT_CRITICAL();
+
+            errno = EAGAIN;
+            return -1;
+        } else {
+            HAS_WLOC = true;
+        }
+
+        taskEXIT_CRITICAL();
+    }
+
+
+    if(_term_fildes[fid] != NULL) { errno = EMFILE; return -1; }
+
+    _term_fildes[fid] = malloc(sizeof(_term_fildes_t));
+
+    if(CK_FLG(O_RDONLY) || CK_FLG(O_RDWR)) {
+        // Allocate recieve queue
+        _term_fildes[fid]->rx = xQueueCreate(conf_TERM_USART_QUEUESIZE, sizeof(uint8_t));
+    } else {
+        _term_fildes[fid]->rx = NULL;
+    }
+
+    _term_fildes[fid]->wloc = wants_wloc;
+    
     return fid; 
 }
 
 int _term_close(int fid) { 
 
+    _term_fildes_t* fildes = _term_fildes[fid];
+
+    taskENTER_CRITICAL();
+    taskDISABLE_INTERRUPTS();
+
+    // Clear the FID entry
+    _term_fildes[fid] = NULL;
+
+    // Free queue
+    if(fildes->rx != NULL) vQueueDelete(fildes->rx);
+
+    // Free wloc
+    if(fildes->wloc) HAS_WLOC = false;
+
+    taskDISABLE_INTERRUPTS();
+    taskEXIT_CRITICAL();
+
+    free(fildes);
     return 0; 
 }
 
 int _term_fstat(int fid, struct stat *st) { 
-    st->st_mode = S_IFCHR; 
+    st->st_mode = S_IFCHR;
     return 0; 
 }
 
 int _term_istty(int fid) { 
-
     return 1; 
+
 }
 
 int _term_read(int fid, char *ptr, int len) { 
 
-    return -1; 
+    int i = 0;
+    char v;
+
+    _term_fildes_t* fildes = _term_fildes[fid];
+
+    while(len > 0) {
+
+        if(xQueueReceive(fildes->rx, &v, (portTickType)10)) {
+            *ptr++ = v;
+        } else if(i == 0) {
+            taskYIELD();
+            continue;
+        } else
+            break;
+
+        len--;
+        i++;
+    }
+
+    return i; 
 }
 
 int _term_writebyte(uint8_t v) {
     uint16_t value = v;
+
+    taskENTER_CRITICAL();
+
     USART_SendData(conf_TERM_USART, value);
     while(USART_GetFlagStatus(conf_TERM_USART, USART_FLAG_TXE) == RESET);
+
+    taskEXIT_CRITICAL();
+
     return 1;
 }
 
@@ -118,6 +215,30 @@ int _term_lseek(int fid, int ptr, int wence) {
 }
 
 /** END REGION: Driver Interface **/
+
+
+/** REGION: Interrupt Hander **/
+
+void conf_TERM_USART_IRQHandler(void) {
+
+    int fid;
+    uint8_t c;
+    portBASE_TYPE xHigherPriorityTaskWoken = 0;
+
+    if(USART_GetITStatus(conf_TERM_USART, USART_IT_RXNE) != RESET) {
+        c = (uint8_t)USART_ReceiveData(conf_TERM_USART);
+
+        // Send input to each reading FID
+        for(fid = 0; fid < conf_MAX_OPEN_FILE_IDS; fid++) {
+            if(_term_fildes[fid] != NULL && _term_fildes[fid]->rx != NULL)  {
+                xQueueSendToBackFromISR(_term_fildes[fid]->rx, &c, &xHigherPriorityTaskWoken);
+            }
+        }
+    }
+}
+
+/** END REGION: Interrupt Handler **/
+
 
 /** Install the driver **/
 

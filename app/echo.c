@@ -1,11 +1,14 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <echo.h>
+#include <stdio.h>
 
 void echo_main(void* pvParams) {
 
+    char c;
     while(1) {
-        vTaskDelay(1000);
+        c = getchar();
+        putchar(c);
     }
 }
 

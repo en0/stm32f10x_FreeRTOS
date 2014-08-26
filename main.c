@@ -7,6 +7,7 @@ extern void init_wireup();
 
 // Application Includes
 #include <blinky.h>
+#include <echo.h>
 
 /** Some debugging Stuff **/
 #include <stdio.h>
@@ -33,6 +34,12 @@ void send_string(const char* str) {
     // For debugging
     for(;*str!='\0'; str++)
         send_byte(*str);
+}
+
+void send_integer(const char* fmt, uint32_t i) {
+    char buffer[100];
+    sprintf(buffer, fmt, i);
+    send_string(buffer);
 }
 
 void send_memory(void* ptr, size_t len) {
@@ -77,23 +84,15 @@ int main(void)
 	timer_init();   // Start timers
     init_wireup();  // Configure wireup
 
-    // Start Services
-    blinky_app();
-    //echo_app();
-
-    send_string("** NOTICE: [ Test drivers ]\n");
-
-
-    printf("Hello, World!\r\n");
-
-    send_string("** NOTICE: [ Starting Task Scheduler ]\n");
+    blinky_app();   // Status Application
+    echo_app();     // Driver Test
 
 	vTaskStartScheduler();
 
 	/** We'll only get here if there was insufficient memory    **
 	 ** to create the idle task.                                **/
 
-    send_string("Insufficient meory to create idle task!\n");
+    send_string("Insufficient memory to create idle task!\n");
 
     for(;;);
 

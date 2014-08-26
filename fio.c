@@ -39,7 +39,7 @@ extern void send_string(const char*);
  **/
 
 int _fstat(int file, struct stat *st) {
-    send_string("\n/** [ _fstat ] **/\n");
+    //send_string("\n/** [ _fstat ] **/\n");
     return devlist_fStat(file, st);
 
     /** 
@@ -67,7 +67,7 @@ int _fstat(int file, struct stat *st) {
 
 
 int _open(const char *name, int flags, int mode) {
-    send_string("\n/** [ _open ] **/\n");
+    //send_string("\n/** [ _open ] **/\n");
     return devlist_Open(name, flags, mode);
 
     /**
@@ -111,7 +111,7 @@ int _open(const char *name, int flags, int mode) {
 
 
 int _write(int file, char *ptr, int len) {
-    send_string("\n/** [ _write ] **/\n");
+    //send_string("\n/** [ _write ] **/\n");
     return devlist_Write(file, ptr, len);
 
     /** 
@@ -155,7 +155,7 @@ int _close(int file) {
 
 
 int _isatty(int file) {
-    send_string("\n/** [ _isatty ] **/\n");
+    //send_string("\n/** [ _isatty ] **/\n");
     return devlist_IsTTY(file);
 
     /** 
@@ -175,7 +175,7 @@ int _isatty(int file) {
 }
 
 int _read(int file, char* ptr, int len) {
-    send_string("\n/** [ _read ] **/\n");
+    //send_string("\n/** [ _read ] **/\n");
     return devlist_Read(file, ptr, len);
 
     /** 
@@ -197,7 +197,7 @@ int _read(int file, char* ptr, int len) {
 }
 
 int _lseek(int file, int ptr, int dir) {
-    send_string("\n/** [ _lseek ] **/\n");
+    //send_string("\n/** [ _lseek ] **/\n");
     return devlist_lSeek(file, ptr, dir);
 
     /** 

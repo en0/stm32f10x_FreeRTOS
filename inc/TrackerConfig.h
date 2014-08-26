@@ -7,6 +7,7 @@
 /** The max number of open files supported by the system **/
 #define conf_MAX_OPEN_FILE_IDS 32
 
+
 /** REGION: GPS Wireup **/
 
 // Enable GPS over USART
@@ -46,6 +47,10 @@
 // Enable Termainal IO over USART
 #define conf_ENABLE_PERIPH_TERM_USART 1
 #define conf_DEVLIST_PATH_TERM_USART "/dev/tty0"
+#define conf_TERM_USART_QUEUESIZE 1024
+
+// Interrupt Handerl
+#define conf_TERM_USART_IRQHandler USART3_IRQHandler
 
 // Uart Port
 #define conf_TERM_USART USART3
